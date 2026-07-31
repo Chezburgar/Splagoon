@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Splagoon — Turf War</title>
+<link rel="stylesheet" href="./client/style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦑</text></svg>" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<script>window.SPLAGOON_OFFLINE = true;</script>
+<canvas id="view"></canvas>
+
+<!-- ------------------------------- HUD ------------------------------- -->
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div class="score-side alpha">
+      <span class="score-name">ALPHA</span>
+      <span class="score-pct" id="scoreA">0.0%</span>
+    </div>
+    <div id="clock">
+      <div id="clockTime">3:00</div>
+      <div id="clockLabel">TURF WAR</div>
+    </div>
+    <div class="score-side bravo">
+      <span class="score-pct" id="scoreB">0.0%</span>
+      <span class="score-name">BRAVO</span>
+    </div>
+  </div>
+  <div id="turfbar">
+    <div id="turfA"></div>
+    <div id="turfB"></div>
+    <div id="turfMid"></div>
+  </div>
+
+  <canvas id="minimap" width="220" height="260"></canvas>
+
+  <div id="crosshair"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="9" /><circle cx="20" cy="20" r="1.8" class="dot"/><path d="M20 2v7M20 31v7M2 20h7M31 20h7"/></svg></div>
+
+  <div id="killfeed"></div>
+
+  <div id="bottomleft">
+    <div id="inktank"><div id="inkfill"></div><span id="inklabel">INK</span></div>
+    <div id="weaponinfo">
+      <div id="weaponName">Splattershot</div>
+      <div id="subName">Splat Bomb <b>Q</b></div>
+    </div>
+  </div>
+
+  <div id="specialwrap">
+    <div id="specialRing"><svg viewBox="0 0 100 100">
+      <circle class="track" cx="50" cy="50" r="42"></circle>
+      <circle class="fill" id="specialFill" cx="50" cy="50" r="42"></circle>
+    </svg><span id="specialName">Inkstrike</span><b id="specialKey">E</b></div>
+  </div>
+
+  <div id="respawn" class="hidden"><div class="big">SPLATTED!</div><div id="respawnTimer">3</div></div>
+  <div id="damage"></div>
+  <div id="announce"></div>
+</div>
+
+<!-- ----------------------------- Scoreboard --------------------------- -->
+<div id="scoreboard" class="hidden">
+  <div class="sb-team alpha"><h3>ALPHA</h3><ul id="sbA"></ul></div>
+  <div class="sb-team bravo"><h3>BRAVO</h3><ul id="sbB"></ul></div>
+</div>
+
+<!-- ------------------------------ Results ----------------------------- -->
+<div id="results" class="hidden">
+  <div class="res-banner" id="resBanner">VICTORY!</div>
+  <div class="res-bar"><div class="res-a" id="resA"></div><div class="res-b" id="resB"></div></div>
+  <div class="res-pcts"><span id="resPctA" class="alpha">0%</span><span id="resPctB" class="bravo">0%</span></div>
+  <table class="res-table"><thead><tr><th>#</th><th>Player</th><th>Weapon</th><th>Turf</th><th>K</th><th>D</th></tr></thead><tbody id="resRows"></tbody></table>
+  <div class="res-hint">Returning to Inkopolis Plaza…</div>
+</div>
+
+<!-- ------------------------------- Lobby ------------------------------ -->
+<div id="lobbyui" class="hidden">
+  <div id="lobbyTop">
+    <div class="logo">SPLA<span>GOON</span></div>
+    <div id="playersOnline">0 inklings in the plaza</div>
+  </div>
+  <div id="lobbyHint">
+    <b>WASD</b> move · <b>Space</b> jump · <b>Shift</b> squid · <b>Mouse</b> look ·
+    walk into <b>Deca Tower</b> or press <b>Enter</b> to battle
+  </div>
+  <div id="queuebox" class="hidden">
+    <div class="q-title">MATCHMAKING</div>
+    <div class="q-count"><span id="qNum">1</span> in queue</div>
+    <div class="q-timer" id="qTimer">12</div>
+    <button id="qCancel">Cancel</button>
+  </div>
+  <div id="chatbox">
+    <div id="chatlog"></div>
+    <input id="chatinput" maxlength="80" placeholder="Press T to chat…" />
+  </div>
+  <div id="gearpanel">
+    <div class="gp-title">LOADOUT</div>
+    <div id="weaponCards"></div>
+  </div>
+</div>
+
+<!-- ------------------------------- Title ------------------------------ -->
+<div id="title">
+  <div class="t-glow"></div>
+  <h1>SPLA<span>GOON</span></h1>
+  <p class="tag">Ink the turf. Rule the plaza.</p>
+  <div class="t-form">
+    <label>NAME</label>
+    <input id="nameInput" maxlength="14" placeholder="Inkling" />
+    <div class="t-teamrow">
+      <span>INK</span>
+      <button class="teampick alpha selected" data-team="0">ORANGE</button>
+      <button class="teampick bravo" data-team="1">CYAN</button>
+    </div>
+    <button id="playBtn">ENTER THE PLAZA</button>
+  </div>
+  <div class="t-controls">
+    <div><b>WASD</b> Move</div><div><b>Mouse</b> Aim</div><div><b>LMB</b> Shoot</div>
+    <div><b>Shift</b> Squid form</div><div><b>Space</b> Jump</div><div><b>Q</b> Sub</div>
+    <div><b>E</b> Special</div><div><b>Tab</b> Scores</div><div><b>T</b> Chat</div>
+  </div>
+  <div class="t-foot">Turf War · up to 8 players · bots fill empty slots</div>
+</div>
+
+<div id="loading"><div class="squid">🦑</div><div>Loading ink…</div></div>
+<div id="connlost" class="hidden">Connection lost — <button onclick="location.reload()">reconnect</button></div>
+
+<script type="module" src="./client/main.js"></script>
+</body>
+</html>
