@@ -12,8 +12,10 @@ npm start           # http://localhost:8080
 
 Open the page, pick a name and ink colour, and you land in **Inkopolis Plaza**.
 Walk into Deca Tower (or press <kbd>Enter</kbd>) to queue for a 3-minute Turf
-War on **Tidewater Quay**. Bots fill any empty slots, so a match always starts —
-open a second tab or send a friend the URL to play together.
+War on one of two stages — **Tidewater Quay**, a dockyard of containers and
+gantries, or **Cinder Skatepark**, a bowl of quarter pipes and half pipes.
+Squads are always 4v4 with bots taking any seat a human has not, so a match
+always starts — open a second tab or send a friend the URL to play together.
 
 ## Controls
 
@@ -41,6 +43,9 @@ refilling; on enemy ink you crawl and take damage. Inked walls become ladders.
 Painting your route is how you move, and painting the enemy's route is how you
 stop them.
 
+**Your spawn deck is safe ground** — it glows in your team's colour, and no
+damage lands while you are standing on it, so nobody can camp your respawn.
+
 **Four weapons**, each with its own special:
 
 | Weapon | Feel | Special |
@@ -56,7 +61,7 @@ stop them.
 shared/     simulation shared verbatim by client and server
   world.js      collision (AABB + wedge ramps), raycasting, paint surfaces,
                 the ink lattice, coverage scoring, wall-climb queries
-  mapdata.js    both stages, authored as boxes and ramps and mirrored
+  mapdata.js    stages, authored as boxes and ramps then mirrored
   constants.js  weapons, movement, ink economy
   protocol.js   websocket message types
 server/
@@ -110,7 +115,10 @@ menu.
 
 ```bash
 npm test                          # shared simulation: collision, ink, scoring,
-                                  # climbing, a 30s bot match, full lifecycle
+                                  # climbing, per-stage validation (spawns on
+                                  # solid ground, ramps meeting their platforms,
+                                  # bots playing without falling out), a bot
+                                  # match and the full match lifecycle
 npm run smoke                     # end-to-end in a real browser (playwright)
 npm run smoke:multi               # two clients in one match
 ```
@@ -120,6 +128,7 @@ and a server running. To exercise a whole match quickly:
 
 ```bash
 SPLAGOON_MATCH_SECONDS=45 SPLAGOON_RESULTS_SECONDS=10 npm start
+SPLAGOON_STAGE=park npm start     # pin the stage instead of rotating
 ```
 
 ## Notes

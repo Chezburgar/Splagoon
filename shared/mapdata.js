@@ -45,7 +45,7 @@ function symmetric(parts) {
 /* ------------------------------------------------------------------ */
 
 const ARENA_HALF_X = 26;
-const ARENA_HALF_Z = 40;
+const ARENA_HALF_Z = 35;
 
 const arenaShared = [
   // Main deck. Its top face is y=0, the datum every other part sits on.
@@ -63,21 +63,21 @@ const arenaShared = [
 
 const arenaHalf = [
   // Spawn platform (team side, z negative).
-  box(0, 0, -33, 18, 3.2, 12, { style: 'spawn' }),
-  ramp(-6.5, 0, -25.25, 5, 3.2, 3.5, '-z', { style: 'spawn' }),
-  ramp(6.5, 0, -25.25, 5, 3.2, 3.5, '-z', { style: 'spawn' }),
+  box(0, 0, -29, 18, 3.2, 12, { style: 'spawn' }),
+  ramp(-6.5, 0, -21.25, 5, 3.2, 3.5, '-z', { style: 'spawn' }),
+  ramp(6.5, 0, -21.25, 5, 3.2, 3.5, '-z', { style: 'spawn' }),
   // Spawn back wall / props.
-  box(0, 3.2, -38.4, 18, 4, 1.2, { style: 'metal', top: false, scoring: false }),
+  box(0, 3.2, -34.4, 18, 4, 1.2, { style: 'metal', top: false, scoring: false }),
 
   // Forward plateau in front of spawn.
-  box(0, 0, -19, 14, 1.2, 6, { style: 'plate' }),
-  ramp(0, 0, -14.75, 8, 1.2, 2.5, '-z', { style: 'plate' }),
+  box(0, 0, -17, 14, 1.2, 6, { style: 'plate' }),
+  ramp(0, 0, -12.75, 8, 1.2, 2.5, '-z', { style: 'plate' }),
 
   // Wing platforms.
-  box(-19, 0, -14, 10, 2.2, 8, { style: 'plate' }),
-  ramp(-19, 0, -8.75, 6, 2.2, 2.5, '-z', { style: 'plate' }),
-  box(19, 0, -14, 10, 2.2, 8, { style: 'plate' }),
-  ramp(19, 0, -8.75, 6, 2.2, 2.5, '-z', { style: 'plate' }),
+  box(-19, 0, -12.5, 10, 2.2, 8, { style: 'plate' }),
+  ramp(-19, 0, -7.25, 6, 2.2, 2.5, '-z', { style: 'plate' }),
+  box(19, 0, -12.5, 10, 2.2, 8, { style: 'plate' }),
+  ramp(19, 0, -7.25, 6, 2.2, 2.5, '-z', { style: 'plate' }),
 
   // Crates for cover in the mid approach.
   box(-8.5, 0, -8, 3, 2, 3, { style: 'crate' }),
@@ -86,8 +86,8 @@ const arenaHalf = [
   box(22, 0, -3, 4, 3.2, 5, { style: 'crate' }),
 
   // Low ledges that reward wall climbing.
-  box(-12.5, 0, -22, 4, 1.6, 4, { style: 'crate' }),
-  box(12.5, 0, -22, 4, 1.6, 4, { style: 'crate' }),
+  box(-12.5, 0, -19, 4, 1.6, 4, { style: 'crate' }),
+  box(12.5, 0, -19, 4, 1.6, 4, { style: 'crate' }),
 ];
 
 const arenaBounds = [
@@ -104,34 +104,129 @@ export const ARENA = {
   sky: { top: '#1d3a63', bottom: '#7fd4e8', fog: '#8fc7dd', fogDensity: 0.0075 },
   bounds: { minX: -ARENA_HALF_X, maxX: ARENA_HALF_X, minZ: -ARENA_HALF_Z, maxZ: ARENA_HALF_Z },
   killY: -12,
+  // Standing on your own spawn deck makes you untouchable, so a team cannot
+  // simply park on the enemy's respawn point.
+  spawnZones: [
+    { team: 0, minX: -9.5, maxX: 9.5, minZ: -35.5, maxZ: -22.5, minY: 3.0 },
+    { team: 1, minX: -9.5, maxX: 9.5, minZ: 22.5, maxZ: 35.5, minY: 3.0 },
+  ],
   parts: [...arenaShared, ...symmetric(arenaHalf), ...arenaBounds],
   spawns: [
     // Team Alpha spawns on the -Z side facing +Z.
     { team: 0, points: [
-      { x: -5, y: 3.3, z: -33, yaw: 0 },
-      { x: -1.7, y: 3.3, z: -33, yaw: 0 },
-      { x: 1.7, y: 3.3, z: -33, yaw: 0 },
-      { x: 5, y: 3.3, z: -33, yaw: 0 },
+      { x: -5, y: 3.3, z: -29, yaw: 0 },
+      { x: -1.7, y: 3.3, z: -29, yaw: 0 },
+      { x: 1.7, y: 3.3, z: -29, yaw: 0 },
+      { x: 5, y: 3.3, z: -29, yaw: 0 },
     ] },
     { team: 1, points: [
-      { x: 5, y: 3.3, z: 33, yaw: Math.PI },
-      { x: 1.7, y: 3.3, z: 33, yaw: Math.PI },
-      { x: -1.7, y: 3.3, z: 33, yaw: Math.PI },
-      { x: -5, y: 3.3, z: 33, yaw: Math.PI },
+      { x: 5, y: 3.3, z: 29, yaw: Math.PI },
+      { x: 1.7, y: 3.3, z: 29, yaw: Math.PI },
+      { x: -1.7, y: 3.3, z: 29, yaw: Math.PI },
+      { x: -5, y: 3.3, z: 29, yaw: Math.PI },
     ] },
   ],
   // Purely decorative props for the client.
   props: [
     ...symmetric([
-      { type: 'crane', x: -24, y: 0, z: -30, rot: 0.4 },
-      { type: 'container', x: -24.5, y: 0, z: -22, rot: 0.1, color: '#e2574c' },
-      { type: 'container', x: 24.5, y: 0, z: -22, rot: -0.1, color: '#4ca3e2' },
+      { type: 'crane', x: -24, y: 0, z: -26, rot: 0.4 },
+      { type: 'container', x: -24.5, y: 0, z: -20, rot: 0.1, color: '#e2574c' },
+      { type: 'container', x: 24.5, y: 0, z: -20, rot: -0.1, color: '#4ca3e2' },
       { type: 'buoy', x: -30, y: -1.4, z: -12, rot: 0 },
       { type: 'buoy', x: 31, y: -1.4, z: -20, rot: 0 },
-      { type: 'banner', x: 0, y: 3.2, z: -38.2, rot: 0, team: 0 },
+      { type: 'banner', x: 0, y: 3.2, z: -34.2, rot: 0, team: 0 },
     ]),
     { type: 'lamp', x: -15, y: 2.4, z: -8, rot: 0 },
     { type: 'lamp', x: 15, y: 2.4, z: 8, rot: 0 },
+  ],
+};
+
+/* ------------------------------------------------------------------ */
+/* Turf War stage: "Cinder Skatepark"                                   */
+/* ------------------------------------------------------------------ */
+
+const PARK_HALF_X = 24;
+const PARK_HALF_Z = 34;
+
+const parkShared = [
+  // Ground.
+  box(0, -2, 0, PARK_HALF_X * 2, 2, PARK_HALF_Z * 2, { style: 'plaza' }),
+  // Centre bowl: two quarter pipes facing each other across a low island.
+  box(0, 0, 0, 16, 1.0, 9, { style: 'plate' }),
+  ramp(0, 0, -6.75, 16, 1.0, 4.5, '+z', { style: 'plate' }),
+  ramp(0, 0, 6.75, 16, 1.0, 4.5, '-z', { style: 'plate' }),
+  // Grind box on top of the island.
+  box(0, 1.0, 0, 5, 1.4, 5, { style: 'metal' }),
+  // Half pipes on the flanks, tall enough to need a climb or a ramp.
+  box(-19, 0, 0, 8, 3.4, 18, { style: 'crate' }),
+  ramp(-13.5, 0, -6, 3, 3.4, 6, '-x', { style: 'crate' }),
+  box(19, 0, 0, 8, 3.4, 18, { style: 'crate' }),
+  ramp(13.5, 0, 6, 3, 3.4, 6, '+x', { style: 'crate' }),
+];
+
+const parkHalf = [
+  // Spawn deck.
+  box(0, 0, -28, 16, 2.6, 10, { style: 'spawn' }),
+  ramp(0, 0, -21.25, 8, 2.6, 3.5, '-z', { style: 'spawn' }),
+  box(0, 2.6, -33.2, 16, 3.6, 1.6, { style: 'metal', top: false, scoring: false }),
+
+  // Funbox in the approach lane.
+  box(0, 0, -14, 9, 1.2, 5, { style: 'plate' }),
+  ramp(-6.25, 0, -14, 3.5, 1.2, 5, '+x', { style: 'plate' }),
+  ramp(6.25, 0, -14, 3.5, 1.2, 5, '-x', { style: 'plate' }),
+
+  // Side ledges linking the flanks to the middle.
+  box(-13, 0, -20, 6, 1.8, 5, { style: 'crate' }),
+  box(13, 0, -20, 6, 1.8, 5, { style: 'crate' }),
+  // Rails / low cover near mid.
+  box(-8, 0, -7, 2.4, 1.6, 6, { style: 'metal' }),
+  box(8, 0, -7, 2.4, 1.6, 6, { style: 'metal' }),
+  box(-21, 0, -24, 5, 2.4, 5, { style: 'crate' }),
+  box(21, 0, -24, 5, 2.4, 5, { style: 'crate' }),
+];
+
+const parkBounds = [
+  box(0, 0, -PARK_HALF_Z - 1.5, PARK_HALF_X * 2 + 6, 12, 3, { style: 'bounds', top: false, sides: false, scoring: false, climb: false }),
+  box(0, 0, PARK_HALF_Z + 1.5, PARK_HALF_X * 2 + 6, 12, 3, { style: 'bounds', top: false, sides: false, scoring: false, climb: false }),
+  box(-PARK_HALF_X - 1.5, 0, 0, 3, 12, PARK_HALF_Z * 2 + 6, { style: 'bounds', top: false, sides: false, scoring: false, climb: false }),
+  box(PARK_HALF_X + 1.5, 0, 0, 3, 12, PARK_HALF_Z * 2 + 6, { style: 'bounds', top: false, sides: false, scoring: false, climb: false }),
+];
+
+export const PARK = {
+  id: 'park',
+  name: 'Cinder Skatepark',
+  kind: 'battle',
+  sky: { top: '#2b1250', bottom: '#ff9a5c', fog: '#e8a583', fogDensity: 0.0085 },
+  bounds: { minX: -PARK_HALF_X, maxX: PARK_HALF_X, minZ: -PARK_HALF_Z, maxZ: PARK_HALF_Z },
+  killY: -12,
+  spawnZones: [
+    { team: 0, minX: -8.5, maxX: 8.5, minZ: -33.5, maxZ: -22.5, minY: 2.4 },
+    { team: 1, minX: -8.5, maxX: 8.5, minZ: 22.5, maxZ: 33.5, minY: 2.4 },
+  ],
+  parts: [...parkShared, ...symmetric(parkHalf), ...parkBounds],
+  spawns: [
+    { team: 0, points: [
+      { x: -4.5, y: 2.7, z: -28, yaw: 0 },
+      { x: -1.5, y: 2.7, z: -28, yaw: 0 },
+      { x: 1.5, y: 2.7, z: -28, yaw: 0 },
+      { x: 4.5, y: 2.7, z: -28, yaw: 0 },
+    ] },
+    { team: 1, points: [
+      { x: 4.5, y: 2.7, z: 28, yaw: Math.PI },
+      { x: 1.5, y: 2.7, z: 28, yaw: Math.PI },
+      { x: -1.5, y: 2.7, z: 28, yaw: Math.PI },
+      { x: -4.5, y: 2.7, z: 28, yaw: Math.PI },
+    ] },
+  ],
+  props: [
+    ...symmetric([
+      { type: 'banner', x: 0, y: 2.6, z: -33.0, rot: 0, team: 0 },
+      { type: 'tree', x: -22, y: 0, z: -30, rot: 0.4 },
+      { type: 'tree', x: 22, y: 0, z: -30, rot: 1.4 },
+      { type: 'shopSign', x: -23.4, y: 5.4, z: -12, rot: Math.PI / 2, color: '#ffd23f', text: 'SK8' },
+    ]),
+    { type: 'lamp', x: -12, y: 0, z: 0, rot: 0 },
+    { type: 'lamp', x: 12, y: 0, z: 0, rot: 0 },
   ],
 };
 
@@ -220,5 +315,9 @@ export const TOWN = {
   ],
 };
 
-export const MAPS = { [ARENA.id]: ARENA, [TOWN.id]: TOWN };
+export const MAPS = { [ARENA.id]: ARENA, [PARK.id]: PARK, [TOWN.id]: TOWN };
+export const BATTLE_STAGES = [ARENA, PARK];
 export function getMap(id) { return MAPS[id] || ARENA; }
+export function randomStage() {
+  return BATTLE_STAGES[Math.floor(Math.random() * BATTLE_STAGES.length)];
+}

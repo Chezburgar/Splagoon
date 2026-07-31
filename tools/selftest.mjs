@@ -3,7 +3,7 @@
 //   node tools/selftest.mjs
 
 import { World, v3 } from '../shared/world.js';
-import { ARENA, TOWN } from '../shared/mapdata.js';
+import { ARENA, TOWN, BATTLE_STAGES } from '../shared/mapdata.js';
 import { PLAYER, MOVE, TICK_DT } from '../shared/constants.js';
 import { Match } from '../server/match.js';
 
@@ -108,7 +108,7 @@ console.log('\n· simulated bot match (30s of turf war)');
 {
   const match = new Match('test', () => {});
   match.begin([]);
-  check('bots filled both teams', match.players.size === 4, `(${match.players.size})`);
+  check('bots filled both teams', match.players.size === 8, `(${match.players.size})`);
   const ticks = Math.round(30 / TICK_DT);
   const t0 = Date.now();
   for (let i = 0; i < ticks; i++) match.update(TICK_DT);
@@ -121,6 +121,64 @@ console.log('\n· simulated bot match (30s of turf war)');
   const stuck = [...match.players.values()].filter((p) => p.pos.y < ARENA.killY + 2);
   check('no bot fell out of the world', stuck.length === 0);
   check(`30s of simulation ran in ${ms}ms (budget 30000ms)`, ms < 30000);
+}
+
+console.log('\n· every battle stage');
+for (const stage of BATTLE_STAGES) {
+  console.log(`  [${stage.name}]`);
+  const sw = new World(stage);
+  check('  has scoring turf', sw.scoringTotal > 8000, `(${sw.scoringTotal})`);
+  for (const group of stage.spawns) {
+    for (const pt of group.points) {
+      const g = sw.groundHeightAt(pt.x, pt.z, pt.y + 1);
+      if (Math.abs(g - pt.y) > 0.45) {
+        check(`  spawn (${pt.x},${pt.z}) stands on ground`, false, `ground=${g} spawn=${pt.y}`);
+      }
+    }
+  }
+  check('  all spawns stand on ground', true);
+
+  // Every ramp must actually deliver you onto the platform it leans against.
+  for (const part of stage.parts) {
+    if (part.type !== 'ramp') continue;
+    const top = part.y + part.sy;
+    const step = 0.6;
+    let x = part.x, z = part.z;
+    if (part.dir === '+z') z = part.z + part.sz / 2 + step;
+    else if (part.dir === '-z') z = part.z - part.sz / 2 - step;
+    else if (part.dir === '+x') x = part.x + part.sx / 2 + step;
+    else x = part.x - part.sx / 2 - step;
+    const g = sw.groundHeightAt(x, z, top + 0.5);
+    if (Math.abs(g - top) > 0.35) {
+      check(`  ramp at (${part.x},${part.z}) ${part.dir} meets its platform`, false,
+        `ramp top=${top} platform=${g}`);
+    }
+  }
+  check('  all ramps meet their platforms', true);
+
+  // Bots should be able to play it without falling out or getting stuck.
+  const m = new Match(`stage-${stage.id}`, () => {}, stage);
+  m.begin([]);
+  const start = [...m.players.values()].map((p) => ({ ...p.pos }));
+  for (let i = 0; i < Math.round(20 / TICK_DT); i++) m.update(TICK_DT);
+  const cov = m.world.coverage();
+  check('  bots ink it', cov[0] > 0.005 && cov[1] > 0.005,
+    `(${(cov[0] * 100).toFixed(1)}% / ${(cov[1] * 100).toFixed(1)}%)`);
+  check('  bots stay in the world', [...m.players.values()].every((p) => p.pos.y > stage.killY + 2));
+  const moved = [...m.players.values()].filter((p, i) =>
+    Math.hypot(p.pos.x - start[i].x, p.pos.z - start[i].z) > 3).length;
+  check('  bots leave spawn', moved >= m.players.size / 2, `(${moved}/${m.players.size} moved)`);
+
+  // Every spawn point must sit inside its own team's protected zone.
+  let zonesOk = !!stage.spawnZones;
+  for (const group of stage.spawns) {
+    const z = (stage.spawnZones || []).find((q) => q.team === group.team);
+    if (!z) { zonesOk = false; continue; }
+    for (const pt of group.points) {
+      if (pt.x < z.minX || pt.x > z.maxX || pt.z < z.minZ || pt.z > z.maxZ || pt.y < z.minY - 0.4) zonesOk = false;
+    }
+  }
+  check('  spawn points sit in their safe zone', zonesOk);
 }
 
 console.log('\n· full match lifecycle');
@@ -136,7 +194,7 @@ console.log('\n· full match lifecycle');
   guard = 0;
   while (m.phase !== 'ended' && guard++ < 400) m.update(TICK_DT);
   check('match ends on the timer', m.phase === 'ended');
-  check('results were computed', !!m.results && m.results.players.length === 4);
+  check('results were computed', !!m.results && m.results.players.length === 8);
   check('winner matches the score', m.results.winner === -1
     || m.results.score[m.results.winner] >= m.results.score[1 - m.results.winner]);
   m.phaseTime = 0.05;

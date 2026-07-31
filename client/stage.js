@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { makeSurfaceTexture, makeSignTexture, makeSkyTexture } from './textures.js';
 import { rampBasis } from '../shared/world.js';
+import { TEAMS } from '../shared/constants.js';
 
 const STYLE_MAT = {
   deck: { rough: 0.85, metal: 0.02 },
@@ -36,6 +37,7 @@ export class Stage {
     this.buildLights();
     this.buildGeometry();
     this.buildProps();
+    this.buildSpawnZones();
     if (mapDef.kind === 'battle') this.buildWater();
     else this.buildSkyline();
   }
@@ -155,13 +157,14 @@ export class Stage {
     mesh.receiveShadow = true;
     this.group.add(mesh);
 
-    // Painted trim strip along the top edge of tall blocks reads as a ledge.
-    if (sy > 1.4 && sy < 12 && part.style !== 'plaza') {
+    // A band just under the lip reads as a ledge. It has to sit clear of the
+    // top face: coplanar geometry z-fights into ugly dark patches.
+    if (sy > 1.4 && sy < 12 && part.style !== 'plaza' && part.style !== 'deck') {
       const trim = new THREE.Mesh(
-        new THREE.BoxGeometry(sx + 0.06, 0.12, sz + 0.06),
+        new THREE.BoxGeometry(sx + 0.07, 0.13, sz + 0.07),
         new THREE.MeshStandardMaterial({ color: 0x2b2740, roughness: 0.5 }),
       );
-      trim.position.set(part.x, part.y + sy - 0.06, part.z);
+      trim.position.set(part.x, part.y + sy - 0.16, part.z);
       trim.castShadow = false;
       this.group.add(trim);
     }
@@ -263,6 +266,34 @@ export class Stage {
       group.add(m);
     }
     this.scene.add(group);
+  }
+
+  // A glowing footprint over each team's safe zone, so the no-damage rule is
+  // something you can see rather than something you discover.
+  buildSpawnZones() {
+    for (const z of this.map.spawnZones || []) {
+      const col = new THREE.Color(TEAMS[z.team].glow);
+      const w = z.maxX - z.minX, d = z.maxZ - z.minZ;
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, d),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12, depthWrite: false }),
+      );
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.set((z.minX + z.maxX) / 2, z.minY + 0.03, (z.minZ + z.maxZ) / 2);
+      plane.renderOrder = 3;
+      this.group.add(plane);
+
+      const border = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(w, 0.06, d)),
+        new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.75 }),
+      );
+      border.position.copy(plane.position);
+      this.group.add(border);
+      this.animated.push((t) => {
+        plane.material.opacity = 0.1 + Math.sin(t * 1.6 + z.team) * 0.04;
+        border.material.opacity = 0.55 + Math.sin(t * 1.6 + z.team) * 0.2;
+      });
+    }
   }
 
   buildProps() {

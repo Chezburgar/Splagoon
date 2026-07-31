@@ -1,7 +1,7 @@
 import { Room } from './room.js';
-import { ARENA } from '../shared/mapdata.js';
+import { randomStage, getMap } from '../shared/mapdata.js';
 import {
-  MATCH, WEAPONS, SUB, SPECIALS, PLAYER, INK, MOVE, TICK_DT, clamp,
+  MATCH, WEAPONS, WEAPON_ORDER, SUB, SPECIALS, PLAYER, INK, MOVE, clamp,
 } from '../shared/constants.js';
 import { S2C, PHASE, FLAG } from '../shared/protocol.js';
 import { playerSnapshot, playerInfo } from './entity.js';
@@ -13,11 +13,13 @@ let projId = 1;
 // Dev override so the whole match lifecycle can be exercised quickly:
 //   SPLAGOON_MATCH_SECONDS=40 npm start
 const DURATION = Number(process.env.SPLAGOON_MATCH_SECONDS) || MATCH.duration;
+const FORCED_STAGE = process.env.SPLAGOON_STAGE || '';
 const RESULTS_TIME = Number(process.env.SPLAGOON_RESULTS_SECONDS) || MATCH.resultsTime;
 
 export class Match extends Room {
-  constructor(id, onFinished) {
-    super(id, ARENA);
+  constructor(id, onFinished, stage = (FORCED_STAGE ? getMap(FORCED_STAGE) : randomStage())) {
+    super(id, stage);
+    this.stageName = stage.name;
     this.kind = 'battle';
     this.onFinished = onFinished;
     this.phase = PHASE.COUNTDOWN;
@@ -42,10 +44,14 @@ export class Match extends Room {
   fillWithBots() {
     const counts = [0, 0];
     for (const p of this.players.values()) counts[p.team]++;
-    const target = Math.max(2, Math.min(MATCH.maxPlayersPerTeam, Math.max(counts[0], counts[1], 2)));
+    // Always run full 4v4 squads; bots take whatever seats humans do not.
+    const target = MATCH.maxPlayersPerTeam;
+    // Both teams get the same bot loadouts, so a lucky weapon roll cannot
+    // decide the match.
+    const comp = shuffled(WEAPON_ORDER).slice(0, target);
     for (let team = 0; team < 2; team++) {
       while (counts[team] < target) {
-        const bot = makeBot(team, this.botName(team, counts[team]));
+        const bot = makeBot(team, this.botName(team, counts[team]), comp[counts[team] % comp.length]);
         this.join(bot, true);
         counts[team]++;
       }
@@ -93,6 +99,7 @@ export class Match extends Room {
         t: S2C.ENTER,
         room: 'match',
         map: this.mapId,
+        stage: this.stageName,
         you: p.id,
         team: p.team,
         phase: this.phase,
@@ -412,9 +419,23 @@ export class Match extends Room {
 
   damage(target, amount, by, weapon) {
     if (!target.alive || this.time < target.invulnUntil) return;
+    if (this.inOwnSpawn(target)) return;
     target.hp -= amount;
     this.broadcast({ t: S2C.HIT, id: target.id, by: by.id, h: Math.max(0, Math.round(target.hp)), d: Math.round(amount) });
     if (target.hp <= 0) this.splatPlayer(target, by, weapon);
+  }
+
+  // Is this player standing safe on their own spawn deck?
+  inOwnSpawn(p) {
+    const zones = this.world.map.spawnZones;
+    if (!zones) return false;
+    for (const z of zones) {
+      if (z.team !== p.team) continue;
+      if (p.pos.x >= z.minX && p.pos.x <= z.maxX &&
+          p.pos.z >= z.minZ && p.pos.z <= z.maxZ &&
+          p.pos.y >= z.minY - 0.3) return true;
+    }
+    return false;
   }
 
   splatPlayer(target, by, weapon) {
@@ -588,6 +609,15 @@ export class Match extends Room {
 }
 
 function r2(n) { return Math.round(n * 100) / 100; }
+
+function shuffled(list) {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 function readDir(d) {
   if (!Array.isArray(d) || d.length < 3) return null;

@@ -6,10 +6,12 @@ import { MOVE, PLAYER, INK, WEAPONS, WEAPON_ORDER, clamp } from '../shared/const
 import { FLAG } from '../shared/protocol.js';
 import { v3, vsub, vlen, vdist, vnorm, vscale } from '../shared/world.js';
 
-const SKILL = { react: 0.16, aimError: 0.055, viewRange: 26 };
+const SKILL = { react: 0.16, aimError: 0.055, viewRange: 21 };
 
-export function makeBot(team, name) {
-  const weapon = WEAPON_ORDER[Math.floor(Math.random() * WEAPON_ORDER.length)];
+export function makeBot(team, name, weaponId) {
+  const weapon = weaponId && WEAPONS[weaponId]
+    ? weaponId
+    : WEAPON_ORDER[Math.floor(Math.random() * WEAPON_ORDER.length)];
   const p = makePlayer({ name, team, weapon, bot: true });
   p.specialKind = WEAPONS[weapon].special;
   p.ai = {
@@ -55,6 +57,7 @@ export function updateBot(match, p, dt) {
   // ---- combat ---------------------------------------------------------
   const enemy = ai.targetId >= 0 ? match.players.get(ai.targetId) : null;
   let aimDir = null;
+  let engaged = false;
   if (enemy && enemy.alive && !squid) {
     const eye = v3(p.pos.x, p.pos.y + PLAYER.eyeHeight, p.pos.z);
     const tgt = v3(enemy.pos.x, enemy.pos.y + 0.9, enemy.pos.z);
@@ -66,6 +69,7 @@ export function updateBot(match, p, dt) {
     tgt.z += enemy.vel.z * 0.12 + ai.aimError.z;
     aimDir = vnorm(vsub(tgt, eye));
     if (!world.losBlocked(eye, tgt, 0.4)) {
+      engaged = true;
       if (w.kind === 'charger') {
         p.charge = Math.min(1, (p.charge || 0) + dt / w.chargeTime);
         if (p.charge >= 0.85) { match.onFire(p, { d: [aimDir.x, aimDir.y, aimDir.z], c: p.charge }); p.charge = 0; }
@@ -79,8 +83,10 @@ export function updateBot(match, p, dt) {
         match.onSub(p, { d: [lob.x, lob.y, lob.z] });
       }
     }
-  } else if (!squid && p.ink > 20) {
-    // No target: paint the ground ahead.
+  }
+  if (!engaged && !squid && p.ink > 20) {
+    // Not shooting at anyone: keep painting turf ahead, which is how a turf
+    // war is actually won.
     const yaw = p.yaw;
     const fwd = v3(Math.sin(yaw), 0, Math.cos(yaw));
     const aim = vnorm(v3(fwd.x, -0.22 - Math.random() * 0.1, fwd.z));
@@ -182,13 +188,24 @@ function think(match, p) {
 
   if (best) {
     ai.goal = v3(best.pos.x, best.pos.y, best.pos.z);
+    ai.goalUntil = 0;
     return;
   }
+
+  // Keep walking to the same patch of turf until it is reached, has been
+  // claimed, or the bot has spent too long trying: re-rolling every think
+  // made them mill around in circles repainting ground they already owned.
+  if (ai.goal && match.time < (ai.goalUntil || 0)) {
+    const d = vdist(p.pos, ai.goal);
+    const owned = world.inkAtGround(ai.goal.x, ai.goal.y + 0.1, ai.goal.z) === p.team;
+    if (d > 2.5 && !owned) return;
+  }
+  ai.goalUntil = match.time + 9;
 
   // Otherwise head for unpainted turf, biased toward the middle of the stage.
   const b = world.map.bounds;
   let bestGoal = null, bestVal = -Infinity;
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 14; i++) {
     const x = b.minX + Math.random() * (b.maxX - b.minX);
     const z = b.minZ + Math.random() * (b.maxZ - b.minZ);
     const g = world.groundHeightAt(x, z, 40);
@@ -196,10 +213,10 @@ function think(match, p) {
     const team = world.inkAtGround(x, g + 0.1, z);
     const d = vdist(p.pos, v3(x, g, z));
     let val = 0;
-    if (team === -1) val += 22;
-    else if (team !== p.team) val += 30;
-    val -= d * 0.55;
-    val -= Math.abs(z) * 0.28;                // favour the middle
+    if (team === -1) val += 34;
+    else if (team !== p.team) val += 46;
+    val -= d * 0.2;
+    val -= Math.abs(z) * 0.12;                // slight pull toward the middle
     val += Math.random() * 8;
     if (val > bestVal) { bestVal = val; bestGoal = v3(x, g, z); }
   }

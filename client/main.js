@@ -240,7 +240,10 @@ class Game {
     this.doorCooldown = 2.5;
 
     if (this.room === 'match') {
-      this.hud.announce('READY?', 1400, TEAMS[this.myTeam].css);
+      this.hud.announce(msg.stage || this.mapDef.name, 1800, '#ffe14d');
+      setTimeout(() => {
+        if (this.phase === PHASE.COUNTDOWN) this.hud.announce('READY?', 1200, TEAMS[this.myTeam].css);
+      }, 1900);
       this.hud.setSpecial(0, SPECIALS[WEAPONS[this.weapon].special].name);
       audio.whistle();
     }
@@ -402,8 +405,9 @@ class Game {
     this.fx.splatDeath(v3(pos.x, pos.y + 0.6, pos.z), killer ? killer.team : 1 - m.team);
     if (victim) victim.deaths = (victim.deaths || 0) + 1;
     if (killer) killer.kills = (killer.kills || 0) + 1;
-    this.hud.killLine(killer?.name || 'The Abyss', killer?.team ?? (1 - m.team),
-      victim?.name || '???', m.team, m.w);
+    const cause = { enemyInk: 'Enemy Ink', pit: 'The Abyss', inkstorm: 'Ink Storm' };
+    this.hud.killLine(killer?.name || cause[m.w] || 'The Abyss', killer?.team ?? (1 - m.team),
+      victim?.name || '???', m.team, killer ? m.w : '');
 
     if (m.id === this.myId) {
       this.player.alive = false;
