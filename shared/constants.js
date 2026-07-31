@@ -161,7 +161,6 @@ export const MATCH = {
   countdown: 5,
   resultsTime: 14,
   maxPlayersPerTeam: 4,
-  minPlayersToStart: 1,   // bots fill the rest
   lobbyQueueSeconds: 12,
 };
 

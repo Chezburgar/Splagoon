@@ -50,8 +50,11 @@ export class Input {
     });
   }
 
-  lock() { this.canvas.requestPointerLock?.(); }
-  unlock() { document.exitPointerLock?.(); }
+  lock() {
+    // Chrome returns a promise that rejects without a user gesture.
+    try { const r = this.canvas.requestPointerLock?.(); if (r && r.catch) r.catch(() => {}); } catch { /* ignore */ }
+  }
+  unlock() { try { document.exitPointerLock?.(); } catch { /* ignore */ } }
   down(code) { return this.enabled && this.keys.has(code); }
   consumeMouse() {
     const m = { dx: this.mouse.dx, dy: this.mouse.dy };

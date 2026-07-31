@@ -10,6 +10,11 @@ import { updateBot, makeBot } from './bot.js';
 
 let projId = 1;
 
+// Dev override so the whole match lifecycle can be exercised quickly:
+//   SPLAGOON_MATCH_SECONDS=40 npm start
+const DURATION = Number(process.env.SPLAGOON_MATCH_SECONDS) || MATCH.duration;
+const RESULTS_TIME = Number(process.env.SPLAGOON_RESULTS_SECONDS) || MATCH.resultsTime;
+
 export class Match extends Room {
   constructor(id, onFinished) {
     super(id, ARENA);
@@ -449,7 +454,7 @@ export class Match extends Room {
       this.phaseTime -= dt;
       if (this.phaseTime <= 0) {
         this.phase = PHASE.ACTIVE;
-        this.phaseTime = MATCH.duration;
+        this.phaseTime = DURATION;
         this.broadcast({ t: S2C.MATCH, phase: this.phase, timeLeft: this.phaseTime });
       }
     } else if (this.phase === PHASE.ACTIVE) {
@@ -568,7 +573,7 @@ export class Match extends Room {
 
   finish() {
     this.phase = PHASE.ENDED;
-    this.phaseTime = MATCH.resultsTime;
+    this.phaseTime = RESULTS_TIME;
     const cov = this.world.coverage();
     const a = Math.round(cov[0] * 1000) / 10;
     const b = Math.round(cov[1] * 1000) / 10;

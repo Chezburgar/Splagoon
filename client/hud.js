@@ -106,13 +106,10 @@ export class Hud {
   setScores(a, b) {
     this.el.scoreA.textContent = `${a.toFixed(1)}%`;
     this.el.scoreB.textContent = `${b.toFixed(1)}%`;
-    const total = Math.max(0.001, a + b);
-    const share = a / total;
-    const inked = Math.min(1, (a + b) / 100);
-    // Bar shows relative dominance, scaled by how much of the map is inked.
-    const wa = 50 + (share - 0.5) * 100 * (0.35 + 0.65 * inked);
-    this.el.turfA.style.width = `${wa}%`;
-    this.el.turfB.style.width = `${100 - wa}%`;
+    // Each side grows inward from its own edge by the share of the stage it
+    // actually owns; the gap in the middle is turf still up for grabs.
+    this.el.turfA.style.width = `${Math.min(100, a)}%`;
+    this.el.turfB.style.width = `${Math.min(100 - Math.min(100, a), b)}%`;
   }
 
   setInk(pct) {

@@ -181,16 +181,16 @@ export class Inkling {
     head.add(cap);
     for (let i = 0; i < 3; i++) {
       const t = new THREE.Group();
-      const seg = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.62, 4, 8), tentMat);
-      seg.position.y = -0.36;
+      const seg = new THREE.Mesh(new THREE.CapsuleGeometry(0.062, 0.34, 4, 8), tentMat);
+      seg.position.y = -0.24;
       t.add(seg);
-      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), tentMat);
-      tip.position.y = -0.74;
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.058, 8, 6), tentMat);
+      tip.position.y = -0.45;
       t.add(tip);
       const a = (i - 1) * 0.34;
-      t.position.set(Math.sin(a) * 0.2, 0.12, -0.26 - Math.abs(i - 1) * 0.04);
-      t.rotation.x = 0.42;
-      t.rotation.z = -a * 0.7;
+      t.position.set((i - 1) * 0.13, 0.04, -0.24 - Math.abs(i - 1) * 0.03);
+      t.rotation.x = 0.6;
+      t.rotation.z = -a * 0.9;
       head.add(t);
       this.tentacles.push(t);
     }
@@ -199,7 +199,7 @@ export class Inkling {
 
     // weapon in the right hand
     this.weapon = makeWeapon(this.weaponId, this.inkColor.getHex());
-    this.weapon.position.set(0.3, 0.86, 0.26);
+    this.weapon.position.set(0.31, 1.0, 0.3);
     g.add(this.weapon);
 
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -255,7 +255,7 @@ export class Inkling {
     this.weaponId = id;
     this.humanoid.remove(this.weapon);
     this.weapon = makeWeapon(id, this.inkColor.getHex());
-    this.weapon.position.set(0.3, 0.86, 0.26);
+    this.weapon.position.set(0.31, 1.0, 0.3);
     this.humanoid.add(this.weapon);
   }
 
@@ -301,8 +301,8 @@ export class Inkling {
     const pitch = state.pitch || 0;
     const aim = -pitch * 0.9 - 0.9 - this.fireKick * 0.35;
     this.arms[1].rotation.x = aim;
-    this.weapon.rotation.x = aim + 0.75;
-    this.weapon.position.z = 0.26 - this.fireKick * 0.12;
+    this.weapon.rotation.x = aim + 0.85;
+    this.weapon.position.z = 0.3 - this.fireKick * 0.12;
 
     const bob = Math.abs(Math.sin(this.t * freq + this.phase)) * 0.045 * walk;
     this.torso.position.y = 0.88 + bob;
@@ -316,7 +316,7 @@ export class Inkling {
 
     for (let i = 0; i < this.tentacles.length; i++) {
       const t = this.tentacles[i];
-      t.rotation.x = 0.42 + Math.sin(this.t * 3 + i * 0.9 + this.phase) * 0.16 - walk * 0.3;
+      t.rotation.x = 0.6 + Math.sin(this.t * 3 + i * 0.9 + this.phase) * 0.14 + walk * 0.2;
       t.rotation.y = Math.sin(this.t * 2.2 + i) * 0.12;
     }
     this.nameplate.visible = !this.isLocal;

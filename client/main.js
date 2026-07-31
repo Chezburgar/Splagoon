@@ -33,7 +33,7 @@ class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.0;
 
     this.camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 900);
     this.scene = new THREE.Scene();
@@ -63,6 +63,7 @@ class Game {
 
     // Adaptive quality: drops effects on weak GPUs so the game stays playable.
     this.quality = 3;               // 3 = bloom + shadows, 2 = no bloom, 1 = no shadows, 0 = low res
+    this.autoQuality = true;
     this.frameAvg = 16;
     this.qualityTimer = 0;
 
@@ -272,7 +273,7 @@ class Game {
     const composer = new EffectComposer(this.renderer);
     composer.setSize(innerWidth, innerHeight);
     composer.addPass(new RenderPass(this.scene, this.camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.72, 0.82);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.34, 0.6, 0.95);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
     this.composer = composer;
@@ -664,6 +665,7 @@ class Game {
   // Watch the frame time and shed work when the GPU cannot keep up.
   updateQuality(dt) {
     this.frameAvg += (dt * 1000 - this.frameAvg) * 0.05;
+    if (!this.autoQuality) return;
     this.qualityTimer += dt;
     if (this.qualityTimer < 2) return;
     if (this.frameAvg > 34 && this.quality > 0) {

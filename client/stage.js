@@ -82,28 +82,56 @@ export class Stage {
 
   buildLights() {
     const sky = this.map.sky;
-    const hemi = new THREE.HemisphereLight(new THREE.Color(sky.bottom), new THREE.Color(0x30264f), 1.0);
+    const hemi = new THREE.HemisphereLight(new THREE.Color(sky.bottom), new THREE.Color(0x30264f), 0.55);
     this.scene.add(hemi);
 
-    const sun = new THREE.DirectionalLight(0xfff3e0, 2.1);
-    sun.position.set(38, 62, 26);
+    const sun = new THREE.DirectionalLight(0xfff3e0, 1.45);
+    const b = this.map.bounds;
+    const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+    sun.position.set(cx + 60, 96, cz + 42);
+    sun.target.position.set(cx, 0, cz);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    const b = this.map.bounds;
-    const span = Math.max(b.maxX - b.minX, b.maxZ - b.minZ) * 0.62;
-    const cam = sun.shadow.camera;
-    cam.left = -span; cam.right = span; cam.top = span; cam.bottom = -span;
-    cam.near = 1; cam.far = 220;
-    sun.shadow.bias = -0.0012;
-    sun.shadow.normalBias = 0.035;
     this.scene.add(sun);
     this.scene.add(sun.target);
     this.sun = sun;
+    this.fitShadowCamera(sun, b);
+    sun.shadow.bias = -0.0009;
+    sun.shadow.normalBias = 0.04;
 
-    const rim = new THREE.DirectionalLight(0x88b4ff, 0.5);
+    const rim = new THREE.DirectionalLight(0x88b4ff, 0.35);
     rim.position.set(-40, 30, -30);
     this.scene.add(rim);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.28));
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+  }
+
+  // Size the shadow frustum to the stage's light-space bounding box, otherwise
+  // ground outside the frustum renders as a hard dark band.
+  fitShadowCamera(sun, b) {
+    sun.updateMatrixWorld(true);
+    sun.target.updateMatrixWorld(true);
+    const view = new THREE.Matrix4().lookAt(sun.position, sun.target.position, new THREE.Vector3(0, 1, 0));
+    view.setPosition(sun.position);
+    view.invert();
+    const p = new THREE.Vector3();
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    const pad = 6;
+    for (const x of [b.minX - pad, b.maxX + pad]) {
+      for (const z of [b.minZ - pad, b.maxZ + pad]) {
+        for (const y of [-6, 26]) {
+          p.set(x, y, z).applyMatrix4(view);
+          minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+          minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+          minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+        }
+      }
+    }
+    const cam = sun.shadow.camera;
+    cam.left = minX; cam.right = maxX;
+    cam.bottom = minY; cam.top = maxY;
+    cam.near = Math.max(0.5, -maxZ - 2);
+    cam.far = -minZ + 2;
+    cam.updateProjectionMatrix();
   }
 
   buildGeometry() {
@@ -173,30 +201,38 @@ export class Stage {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uColorA: { value: new THREE.Color('#0d5f8f') },
-        uColorB: { value: new THREE.Color('#39c7e8') },
+        uColorA: { value: new THREE.Color('#124a70') },
+        uColorB: { value: new THREE.Color('#2f9fc4') },
       },
       vertexShader: `
         uniform float uTime;
         varying float vWave;
         varying vec2 vUv;
+        varying vec3 vWorld;
         void main() {
           vUv = uv;
           vec3 p = position;
-          float w = sin(p.x * 0.09 + uTime * 0.9) * 0.5 + sin(p.y * 0.13 - uTime * 1.3) * 0.35;
+          float w = sin(p.x * 0.09 + uTime * 0.9) * 0.5 + sin(p.y * 0.13 - uTime * 1.3) * 0.35
+                  + sin((p.x + p.y) * 0.05 + uTime * 0.6) * 0.3;
           p.z += w;
           vWave = w;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          vec4 wp = modelMatrix * vec4(p, 1.0);
+          vWorld = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
         }`,
       fragmentShader: `
         uniform vec3 uColorA; uniform vec3 uColorB; uniform float uTime;
-        varying float vWave; varying vec2 vUv;
+        varying float vWave; varying vec2 vUv; varying vec3 vWorld;
         void main() {
-          float f = smoothstep(-0.9, 0.9, vWave);
+          float f = smoothstep(-1.0, 1.0, vWave);
           vec3 c = mix(uColorA, uColorB, f);
-          float spark = smoothstep(0.72, 1.0, sin(vUv.x * 420.0 + uTime) * sin(vUv.y * 380.0 - uTime * 1.7));
-          c += spark * 0.25;
-          gl_FragColor = vec4(c, 0.92);
+          // Soft crests instead of a high frequency sparkle, which aliased badly.
+          float crest = smoothstep(0.55, 1.0, vWave);
+          c = mix(c, c + vec3(0.10, 0.14, 0.16), crest);
+          // Fade toward the fog colour in the distance so the sea meets the sky.
+          float d = clamp(length(vWorld.xz) / 260.0, 0.0, 1.0);
+          c = mix(c, vec3(0.56, 0.78, 0.87), d * d);
+          gl_FragColor = vec4(c, 0.94);
         }`,
       transparent: true,
     });

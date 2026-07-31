@@ -116,9 +116,10 @@ export function makeSurfaceTexture(style) {
   g.fillRect(0, 0, size, size);
 
   // blotchy variation
-  for (let i = 0; i < 220; i++) {
-    const r = 6 + Math.random() * 46;
-    g.globalAlpha = 0.05 + Math.random() * 0.09;
+  const blotchy = !['building', 'shopA', 'shopB', 'tower'].includes(style);
+  for (let i = 0; i < (blotchy ? 220 : 70); i++) {
+    const r = 6 + Math.random() * (blotchy ? 46 : 22);
+    g.globalAlpha = (blotchy ? 0.05 : 0.02) + Math.random() * (blotchy ? 0.09 : 0.03);
     g.fillStyle = Math.random() < 0.5 ? palette[1] : '#ffffff';
     g.beginPath();
     g.arc(Math.random() * size, Math.random() * size, r, 0, 6.2832);
@@ -145,6 +146,33 @@ export function makeSurfaceTexture(style) {
     }
     g.globalAlpha = 1;
   }
+  // Lit windows turn plain boxes into city buildings.
+  if (['building', 'shopA', 'shopB', 'tower'].includes(style)) {
+    const cols = 4, rows = 4;
+    const pad = size * 0.09;
+    const cw = (size - pad * 2) / cols, ch = (size - pad * 2) / rows;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const lit = Math.random();
+        g.globalAlpha = 1;
+        g.fillStyle = lit > 0.55 ? '#ffe9a8' : (lit > 0.3 ? '#5c6ea8' : '#2a2b44');
+        const x = pad + c * cw + cw * 0.16;
+        const y = pad + r * ch + ch * 0.16;
+        g.fillRect(x, y, cw * 0.68, ch * 0.5);
+        g.globalAlpha = 0.35;
+        g.fillStyle = '#14102a';
+        g.fillRect(x, y + ch * 0.5, cw * 0.68, ch * 0.06);
+      }
+    }
+    g.globalAlpha = 0.5;
+    g.strokeStyle = '#221d3f';
+    g.lineWidth = 3;
+    for (let r = 0; r <= rows; r++) {
+      g.beginPath(); g.moveTo(0, pad + r * ch); g.lineTo(size, pad + r * ch); g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
+
   if (style === 'crate') {
     g.globalAlpha = 0.35;
     g.strokeStyle = '#6a4f2c';
