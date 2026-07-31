@@ -8,6 +8,7 @@
     "start": "node server/index.js",
     "dev": "node server/index.js",
     "test": "node tools/selftest.mjs",
+    "build:pages": "node tools/build-pages.mjs",
     "smoke": "node tools/browser-smoke.mjs",
     "smoke:multi": "node tools/multiplayer-smoke.mjs"
   },

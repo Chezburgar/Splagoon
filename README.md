@@ -10,6 +10,11 @@ npm install
 npm start           # http://localhost:8080
 ```
 
+**Play it online:** https://chezburgar.github.io/Splagoon/ — the published build
+has no server to talk to, so it runs the *entire* authoritative server inside
+your browser tab: same simulation, same protocol, you plus seven bots. Run
+`npm start` when you want real multiplayer with other people.
+
 Open the page, pick a name and ink colour, and you land in **Inkopolis Plaza**.
 Walk into Deca Tower (or press <kbd>Enter</kbd>) to queue for a 3-minute Turf
 War on one of two stages — **Tidewater Quay**, a dockyard of containers and
@@ -130,6 +135,28 @@ and a server running. To exercise a whole match quickly:
 SPLAGOON_MATCH_SECONDS=45 SPLAGOON_RESULTS_SECONDS=10 npm start
 SPLAGOON_STAGE=park npm start     # pin the stage instead of rotating
 ```
+
+## Publishing
+
+```bash
+npm run build:pages     # writes docs/ (client + shared + server + three.js slice)
+```
+
+The build copies the game verbatim, rewrites `index.html` to use relative paths
+(so it works from a project subpath like `/Splagoon/`) and sets
+`window.SPLAGOON_OFFLINE`, which makes `client/net.js` speak the protocol to an
+in-page `OfflineServer` instead of a websocket. Without that flag the client
+tries the websocket first and only falls back to offline mode if nothing
+answers, so the same code serves both hosting styles.
+
+Two ways to publish:
+
+- **Deploy from a branch** — the `gh-pages` branch holds the built site at its
+  root. Settings → Pages → Source: *Deploy from a branch*, branch `gh-pages`,
+  folder `/ (root)`. Refresh it with
+  `npm run build:pages && git subtree`-style copy, or just re-run the workflow.
+- **GitHub Actions** — `.github/workflows/pages.yml` runs the tests, builds and
+  deploys on every push to `main`. Settings → Pages → Source: *GitHub Actions*.
 
 ## Notes
 
