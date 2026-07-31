@@ -39,9 +39,10 @@ await a.keyboard.down('Tab');
 await a.waitForTimeout(1200);
 await a.screenshot({ path: `${OUT}/M1-scoreboard.png` });
 await a.keyboard.up('Tab');
-// results
-await a.waitForTimeout(42000);
-await a.screenshot({ path: `${OUT}/M2-results.png` });
-console.log('A end', JSON.stringify(await info(a)));
-console.log('results visible:', await a.evaluate(() => !document.getElementById('results').classList.contains('hidden')));
+// A snapshot mid-battle from each client.
+await a.waitForTimeout(6000);
+await a.screenshot({ path: `${OUT}/M2-clientA.png` });
+await b.screenshot({ path: `${OUT}/M3-clientB.png` });
+console.log('A mid ', JSON.stringify(await info(a)));
+console.log('(run with SPLAGOON_MATCH_SECONDS=45 to watch the results screen too)');
 await browser.close();

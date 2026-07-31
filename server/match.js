@@ -51,17 +51,25 @@ export class Match extends Room {
     const comp = shuffled(WEAPON_ORDER).slice(0, target);
     for (let team = 0; team < 2; team++) {
       while (counts[team] < target) {
-        const bot = makeBot(team, this.botName(team, counts[team]), comp[counts[team] % comp.length]);
+        const bot = makeBot(team, this.botName(), comp[counts[team] % comp.length]);
         this.join(bot, true);
         counts[team]++;
       }
     }
   }
 
-  botName(team, idx) {
-    const names = ['Squiddo', 'Marina', 'Callie', 'Jelonzo', 'Bisk', 'Sheldon', 'Murch', 'Judd',
-      'Annie', 'Crusty', 'Flow', 'Craymond'];
-    return names[(team * 6 + idx + Math.floor(Math.random() * 3)) % names.length];
+  // Each bot in a match gets a distinct name.
+  botName() {
+    if (!this.namePool || !this.namePool.length) {
+      this.namePool = shuffled(['Squiddo', 'Marina', 'Callie', 'Jelonzo', 'Bisk', 'Sheldon',
+        'Murch', 'Judd', 'Annie', 'Crusty', 'Flow', 'Craymond', 'Frye', 'Shiver', 'Pearl']);
+    }
+    const taken = new Set([...this.players.values()].map((p) => p.name));
+    while (this.namePool.length) {
+      const n = this.namePool.pop();
+      if (!taken.has(n)) return n;
+    }
+    return `Bot ${Math.floor(Math.random() * 900 + 100)}`;
   }
 
   join(p, isBot) {
